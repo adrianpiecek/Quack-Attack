@@ -24,8 +24,9 @@ pixel_font = pygame.font.Font("Assets/font/ByteBounce.ttf", 32)
 
 resourceManager = resourceManager.ResourceManager()
 
-ducky_walk_animation = resourceManager.load_animation("Assets/ducky_walk-sheet.png", 32, 32, 6, 2)
-ducky_idle_animation = resourceManager.load_animation("Assets/ducky_idle-sheet.png", 32, 32, 2, 2)
+ducky_walk_animation = resourceManager.load_animation("Assets/ducky_walk-sheet.png", 25, 28, 6, 2)
+ducky_idle_animation = resourceManager.load_animation("Assets/ducky_idle-sheet.png", 25, 28, 2, 2)
+glock_shoot_animation = resourceManager.load_animation("Assets\guns\glock [64x32]\glock [SHOOT].png", 39, 31, 12, 1)
 
 scale = 2
 class Player(pygame.sprite.Sprite):
@@ -72,19 +73,38 @@ class Player(pygame.sprite.Sprite):
             self.movement.x = 1
             self.direction = 1
         if self.movement.x != 0 and self.movement.y != 0:
-            self.movement *= 0.77 # mathematicly accurate normalization (0.707) felt too slow
+            self.movement *= 0.77 # mathematicly accurate normalization (0.707) felt too slow when moving diagonally
 
+    def get_position(self):
+        return self.rect.center
 class Gun(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
-        self.shoot
-        self.rect = self.image.get_rect(center=(100, 100))
-
+        self.shoot = glock_shoot_animation
+        self.image = self.shoot[0]
+        self.flipped_image = pygame.transform.flip(self.shoot[0], True, False).convert_alpha()
+        self.rect = self.image.get_rect(midleft=player.sprite.get_position()+pygame.Vector2(0, 10))
+    
     def update(self):
-        self.rect.center = pygame.mouse.get_pos()
+        self.rect.midleft = player.sprite.get_position() +pygame.Vector2(-10, 13)
+        mouse_pos = pygame.mouse.get_pos()
+        player_pos = player.sprite.get_position()
+        direction = pygame.Vector2(mouse_pos[0] - player_pos[0], mouse_pos[1] - player_pos[1]) # vector from player to mouse
+        angle = direction.angle_to(pygame.Vector2(1, 0)) # angle between direction and x axis
+
+        if angle > 0: 
+            self.rect.y -= self.rect.height/4
+
+        if mouse_pos[0] < player_pos[0]: #aiming left
+            self.image = pygame.transform.rotate(pygame.transform.flip(self.shoot[0], False, True).convert_alpha(), angle).convert_alpha()
+            self.rect.x -= self.rect.width/2
+        elif mouse_pos[0] > player_pos[0]: #aiming right
+            self.image = pygame.transform.rotate(self.shoot[0], angle).convert_alpha()
+            
 
 #player sprite
 player = pygame.sprite.GroupSingle(Player())
+gun = pygame.sprite.GroupSingle(Gun())
 #ground tile
 ground_tile = pygame.image.load("Assets/ground_tile.png").convert_alpha()
 tile_width, tile_height = ground_tile.get_size()
@@ -110,6 +130,9 @@ while True:
     player.draw(screen)
     player.sprite.player_input()
     player.sprite.update()
+
+    gun.draw(screen)
+    gun.sprite.update()
     
 
     screen.blit(text, (10, 10))
