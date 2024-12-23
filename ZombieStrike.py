@@ -3,6 +3,7 @@ from random import randint
 import spriteSheet
 from itertools import cycle
 import math
+import resourceManager
 
 # Inicjalizacja Pygame
 pygame.init()
@@ -20,13 +21,11 @@ screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption("Zombie Strike")
 clock = pygame.time.Clock()
 pixel_font = pygame.font.Font("Assets/font/ByteBounce.ttf", 32)
-player_sheet_image = pygame.image.load("Assets/player_run_sheet.png").convert_alpha()
-ducky_walk_sheet_image = pygame.image.load("Assets/ducky_walk-sheet.png").convert_alpha()
-ducky_idle_sheet_image = pygame.image.load("Assets/ducky_idle-sheet.png").convert_alpha()
-ducky_walk_sprite_sheet = spriteSheet.SpriteSheet(ducky_walk_sheet_image)
-ducky_idle_sprite_sheet = spriteSheet.SpriteSheet(ducky_idle_sheet_image)
-ducky_walk_animation = [ducky_walk_sprite_sheet.get_image(i, 32, 32, 2) for i in range(6)]
-ducky_idle_animation = [ducky_idle_sprite_sheet.get_image(i, 32, 32, 2) for i in range(2)]
+
+resourceManager = resourceManager.ResourceManager()
+
+ducky_walk_animation = resourceManager.load_animation("Assets/ducky_walk-sheet.png", 32, 32, 6, 2)
+ducky_idle_animation = resourceManager.load_animation("Assets/ducky_idle-sheet.png", 32, 32, 2, 2)
 
 scale = 2
 class Player(pygame.sprite.Sprite):
@@ -41,7 +40,7 @@ class Player(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.center = (SCREEN_WIDTH/2, SCREEN_HEIGHT/2)
 
-        self.speed = 3
+        self.speed = 4
         self.direction = 1
         movement = pygame.Vector2(0, 0)
 
@@ -50,7 +49,6 @@ class Player(pygame.sprite.Sprite):
         self.image_index += self.animation_speed
 
         if self.movement.length() > 0:
-            self.movement.normalize_ip()
             self.rect.move_ip(self.movement * self.speed)
             if self.image_index >= len(self.walk):
                 self.image_index = 0
@@ -62,6 +60,7 @@ class Player(pygame.sprite.Sprite):
 
     def player_input(self):
         keys = pygame.key.get_pressed()
+        self.movement = pygame.Vector2(0, 0)
         if keys[pygame.K_w]:
             self.movement.y = -1
         if keys[pygame.K_s]:
@@ -72,8 +71,18 @@ class Player(pygame.sprite.Sprite):
         if keys[pygame.K_d]:
             self.movement.x = 1
             self.direction = 1
-        if not keys[pygame.K_w] and not keys[pygame.K_s] and not keys[pygame.K_a] and not keys[pygame.K_d]:
-            self.movement = pygame.Vector2(0, 0)
+        if self.movement.x != 0 and self.movement.y != 0:
+            self.movement *= 0.77 # mathematicly accurate normalization (0.707) felt too slow
+
+class Gun(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__()
+        self.shoot
+        self.rect = self.image.get_rect(center=(100, 100))
+
+    def update(self):
+        self.rect.center = pygame.mouse.get_pos()
+
 #player sprite
 player = pygame.sprite.GroupSingle(Player())
 #ground tile
