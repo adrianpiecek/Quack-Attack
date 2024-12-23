@@ -1,6 +1,7 @@
 import pygame
 from random import randint
 
+
 # Inicjalizacja Pygame
 pygame.init()
 
@@ -24,3 +25,4 @@ while True:
             quit()
 
     pygame.display.update()
+    clock.tick(FPS)
