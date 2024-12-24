@@ -50,7 +50,7 @@ class Player(pygame.sprite.Sprite):
         self.image_index += self.animation_speed
 
         if self.movement.length() > 0:
-            self.rect.move_ip(self.movement * self.speed)
+            #self.rect.move_ip(self.movement * self.speed)
             if self.image_index >= len(self.walk):
                 self.image_index = 0
             self.image = self.walk[int(self.image_index)] if self.direction == 1 else pygame.transform.flip(self.walk[int(self.image_index)], True, False).convert_alpha()
@@ -107,8 +107,7 @@ class Gun(pygame.sprite.Sprite):
     def shoot(self,direction):
         bullet = Bullet(self.rect.center, direction)
         bullet_group.add(bullet)
-
-
+        player_bullets.append(bullet)
 
     def update(self):
         self.rect.midleft = player.sprite.get_position() +pygame.Vector2(-10, 13)
@@ -137,6 +136,10 @@ class Gun(pygame.sprite.Sprite):
 player = pygame.sprite.GroupSingle(Player())
 gun = pygame.sprite.GroupSingle(Gun())
 bullet_group = pygame.sprite.Group()
+
+display_scroll = [0,0]
+player_bullets = []
+
 #ground tile
 ground_tile = pygame.image.load("Assets/ground_tile.png").convert_alpha()
 tile_width, tile_height = ground_tile.get_size()
@@ -155,10 +158,29 @@ while True:
             pygame.quit()
             quit()
 
+    keys = pygame.key.get_pressed()
+    
+    if keys[pygame.K_a]:
+        display_scroll[0] -= player.sprite.speed
+        for bullet in player_bullets:
+            bullet.rect.x += player.sprite.speed
+    if keys[pygame.K_d]:
+        display_scroll[0] += player.sprite.speed
+        for bullet in player_bullets:
+            bullet.rect.x -= player.sprite.speed
+    if keys[pygame.K_w]:
+        display_scroll[1] -= player.sprite.speed
+        for bullet in player_bullets:
+            bullet.rect.y += player.sprite.speed
+    if keys[pygame.K_s]:
+        display_scroll[1] += player.sprite.speed
+        for bullet in player_bullets:
+            bullet.rect.y -= player.sprite.speed
+
     for x in range(0, SCREEN_WIDTH, tile_width):
         for y in range(0, SCREEN_HEIGHT, tile_height):
-            screen.blit(ground_tile, (x, y))    
-    screen.blit(barell_surf, barell_rect)
+            screen.blit(ground_tile, (x-display_scroll[0], y-display_scroll[1]))    
+    screen.blit(barell_surf, (barell_rect.x - display_scroll[0], barell_rect.y - display_scroll[1]))
     player.draw(screen)
     player.sprite.player_input()
     player.sprite.update()
