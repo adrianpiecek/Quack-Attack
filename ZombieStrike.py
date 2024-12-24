@@ -7,6 +7,7 @@ import resourceManager
 
 # Inicjalizacja Pygame
 pygame.init()
+pygame.mixer.init()
 
 # Parametry gry
 SCREEN_WIDTH, SCREEN_HEIGHT = 800, 600
@@ -27,8 +28,15 @@ resourceManager = resourceManager.ResourceManager()
 ducky_walk_animation = resourceManager.load_animation("Assets/ducky_walk-sheet.png", 25, 28, 6, 2)
 ducky_idle_animation = resourceManager.load_animation("Assets/ducky_idle-sheet.png", 25, 28, 2, 2)
 glock_shoot_animation = resourceManager.load_animation("Assets/guns/glock [64x32]/glock [SHOOT].png", 39, 31, 12, 1)
+ducky_damage_sound = pygame.mixer.Sound("Assets/sounds/ducky_damage.wav")
 bullet_image = resourceManager.load_image("Assets/guns/bullet.png")
+shoot_sound = pygame.mixer.Sound("Assets/sounds/shoot.wav")
+shoot_sound.set_volume(0.4)
 zombie_walk_animation = resourceManager.load_animation("Assets/zombie_run-sheet.png", 23, 23, 7, 2)
+zombie_death_sound = pygame.mixer.Sound("Assets/sounds/zombie_death.wav")
+zombie_death_sound.set_volume(0.8)
+background_music = pygame.mixer.Sound("Assets/sounds/doom theme.mp3")
+background_music.play(-1)
 
 scale = 2
 class Player(pygame.sprite.Sprite):
@@ -103,13 +111,14 @@ class Gun(pygame.sprite.Sprite):
         self.image = self.shoot_anim[0]
         self.flipped_image = pygame.transform.flip(self.shoot_anim[0], True, False).convert_alpha()
         self.rect = self.image.get_rect(midleft=player.sprite.get_position()+pygame.Vector2(0, 10))
-        self.fire_rate = 1
+        self.fire_rate = 0.1
         self.last_shot = 0
 
     def shoot(self,direction):
         bullet = Bullet(self.rect.center, direction)
         bullet_group.add(bullet)
         player_bullets.append(bullet)
+        shoot_sound.play()
 
     def update(self):
         self.rect.midleft = player.sprite.get_position() +pygame.Vector2(-10, 13)
@@ -161,7 +170,7 @@ class Zombie(pygame.sprite.Sprite):
         self.rect.move_ip(self.direction * self.speed * random.uniform(0.80, 1.20))
 
         if self.rect.colliderect(player.sprite.rect):
-            print("player hit")
+            ducky_damage_sound.play()
             player.sprite.health -= 10
             self.kill()
         for bullet in bullet_group:
@@ -171,12 +180,12 @@ class Zombie(pygame.sprite.Sprite):
                 player_bullets.remove(bullet)
         if self.health <= 0:
             self.kill()
+            zombie_death_sound.play()
 
-def zombieSpawn(delay=125):
+def zombieSpawn(delay=15):
     zombie = Zombie()
     if pygame.time.get_ticks() % delay == 0:
         zombie_group.add(zombie)
-        print("zombie spawned")
 
 #player sprite
 player = pygame.sprite.GroupSingle(Player())
@@ -234,7 +243,10 @@ while True:
 
     # for x in range(0, SCREEN_WIDTH, tile_width):
     #     for y in range(0, SCREEN_HEIGHT, tile_height):
-    #         screen.blit(ground_tile, (x-display_scroll[0], y-display_scroll[1]))    
+    #         screen.blit(ground_tile, (x-display_scroll[0], y-display_scroll[1])) 
+
+
+
     screen.fill((125,125,125))
     screen.blit(barell_surf, (barell_rect.x - display_scroll[0], barell_rect.y - display_scroll[1]))
     player.draw(screen)
