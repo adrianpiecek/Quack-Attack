@@ -1,5 +1,5 @@
 import pygame
-from random import randint
+import random
 import spriteSheet
 from itertools import cycle
 import math
@@ -28,6 +28,7 @@ ducky_walk_animation = resourceManager.load_animation("Assets/ducky_walk-sheet.p
 ducky_idle_animation = resourceManager.load_animation("Assets/ducky_idle-sheet.png", 25, 28, 2, 2)
 glock_shoot_animation = resourceManager.load_animation("Assets/guns/glock [64x32]/glock [SHOOT].png", 39, 31, 12, 1)
 bullet_image = resourceManager.load_image("Assets/guns/bullet.png")
+zombie_walk_animation = resourceManager.load_animation("Assets/zombie_run-sheet.png", 23, 23, 7, 2)
 
 scale = 2
 class Player(pygame.sprite.Sprite):
@@ -42,6 +43,7 @@ class Player(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.center = (SCREEN_WIDTH/2, SCREEN_HEIGHT/2)
 
+        self.health = 100
         self.speed = 4
         self.direction = 1
         self.movement = pygame.Vector2(0, 0)
@@ -90,9 +92,9 @@ class Bullet(pygame.sprite.Sprite):
     
     def update(self):  
         self.rect.move_ip(self.direction * self.speed)
-        print(self.direction)
         if self.rect.left > SCREEN_WIDTH or self.rect.right < 0 or self.rect.top > SCREEN_HEIGHT or self.rect.bottom < 0:
             self.kill()
+            player_bullets.remove(self)
 
 class Gun(pygame.sprite.Sprite):
     def __init__(self):
@@ -131,11 +133,56 @@ class Gun(pygame.sprite.Sprite):
                 self.shoot(direction.normalize())
                 self.last_shot = current_time
             
+class Zombie(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__()
+        self.walk = zombie_walk_animation
+        self.image = self.walk[0]
+        self.image_index = 0
+        self.animation_speed = 0.1
+
+        self.health = 20
+
+        self.rect = self.image.get_rect()
+        self.rect.center = (random.randint(0, SCREEN_WIDTH), random.randint(0, SCREEN_HEIGHT))
+
+        self.speed = 2
+        self.direction = pygame.Vector2(0, 0)
+
+    def update(self):
+        self.image_index += self.animation_speed
+        if self.image_index >= len(self.walk):
+            self.image_index = 0
+        self.image = self.walk[int(self.image_index)]
+
+        player_pos = player.sprite.get_position()
+        self.direction = pygame.Vector2(player_pos[0] - self.rect.center[0], player_pos[1] - self.rect.center[1])
+        self.direction = self.direction.normalize()
+        self.rect.move_ip(self.direction * self.speed * random.uniform(0.80, 1.20))
+
+        if self.rect.colliderect(player.sprite.rect):
+            print("player hit")
+            player.sprite.health -= 10
+            self.kill()
+        for bullet in bullet_group:
+            if self.rect.colliderect(bullet.rect):
+                self.health -= 10
+                bullet.kill()
+                player_bullets.remove(bullet)
+        if self.health <= 0:
+            self.kill()
+
+def zombieSpawn(delay=125):
+    zombie = Zombie()
+    if pygame.time.get_ticks() % delay == 0:
+        zombie_group.add(zombie)
+        print("zombie spawned")
 
 #player sprite
 player = pygame.sprite.GroupSingle(Player())
 gun = pygame.sprite.GroupSingle(Gun())
 bullet_group = pygame.sprite.Group()
+zombie_group = pygame.sprite.Group()
 
 display_scroll = [0,0]
 player_bullets = []
@@ -161,25 +208,34 @@ while True:
     keys = pygame.key.get_pressed()
     
     if keys[pygame.K_a]:
-        display_scroll[0] -= player.sprite.speed
+        display_scroll[0] -= player.sprite.speed * -player.sprite.movement.x
         for bullet in player_bullets:
             bullet.rect.x += player.sprite.speed
+        for zombie in zombie_group:
+            zombie.rect.x += player.sprite.speed
     if keys[pygame.K_d]:
-        display_scroll[0] += player.sprite.speed
+        display_scroll[0] += player.sprite.speed * player.sprite.movement.x
         for bullet in player_bullets:
             bullet.rect.x -= player.sprite.speed
+        for zombie in zombie_group:
+            zombie.rect.x -= player.sprite.speed
     if keys[pygame.K_w]:
-        display_scroll[1] -= player.sprite.speed
+        display_scroll[1] -= player.sprite.speed * -player.sprite.movement.y
         for bullet in player_bullets:
             bullet.rect.y += player.sprite.speed
+        for zombie in zombie_group:
+            zombie.rect.y += player.sprite.speed
     if keys[pygame.K_s]:
-        display_scroll[1] += player.sprite.speed
+        display_scroll[1] += player.sprite.speed * player.sprite.movement.y
         for bullet in player_bullets:
             bullet.rect.y -= player.sprite.speed
+        for zombie in zombie_group:
+            zombie.rect.y -= player.sprite.speed
 
-    for x in range(0, SCREEN_WIDTH, tile_width):
-        for y in range(0, SCREEN_HEIGHT, tile_height):
-            screen.blit(ground_tile, (x-display_scroll[0], y-display_scroll[1]))    
+    # for x in range(0, SCREEN_WIDTH, tile_width):
+    #     for y in range(0, SCREEN_HEIGHT, tile_height):
+    #         screen.blit(ground_tile, (x-display_scroll[0], y-display_scroll[1]))    
+    screen.fill((125,125,125))
     screen.blit(barell_surf, (barell_rect.x - display_scroll[0], barell_rect.y - display_scroll[1]))
     player.draw(screen)
     player.sprite.player_input()
@@ -187,6 +243,11 @@ while True:
 
     bullet_group.draw(screen)
     bullet_group.update()
+
+
+    zombieSpawn()
+    zombie_group.draw(screen)
+    zombie_group.update()
 
     gun.draw(screen)
     gun.sprite.update()
