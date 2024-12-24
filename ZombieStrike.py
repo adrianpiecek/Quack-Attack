@@ -26,7 +26,8 @@ resourceManager = resourceManager.ResourceManager()
 
 ducky_walk_animation = resourceManager.load_animation("Assets/ducky_walk-sheet.png", 25, 28, 6, 2)
 ducky_idle_animation = resourceManager.load_animation("Assets/ducky_idle-sheet.png", 25, 28, 2, 2)
-glock_shoot_animation = resourceManager.load_animation("Assets\guns\glock [64x32]\glock [SHOOT].png", 39, 31, 12, 1)
+glock_shoot_animation = resourceManager.load_animation("Assets/guns/glock [64x32]/glock [SHOOT].png", 39, 31, 12, 1)
+bullet_image = resourceManager.load_image("Assets/guns/bullet.png")
 
 scale = 2
 class Player(pygame.sprite.Sprite):
@@ -43,10 +44,9 @@ class Player(pygame.sprite.Sprite):
 
         self.speed = 4
         self.direction = 1
-        movement = pygame.Vector2(0, 0)
+        self.movement = pygame.Vector2(0, 0)
 
     def update(self):
-        keys = pygame.key.get_pressed()
         self.image_index += self.animation_speed
 
         if self.movement.length() > 0:
@@ -77,14 +77,39 @@ class Player(pygame.sprite.Sprite):
 
     def get_position(self):
         return self.rect.center
+
+class Bullet(pygame.sprite.Sprite):
+    def __init__(self, position, direction):
+        super().__init__()
+        self.image = bullet_image
+        self.angle = direction.angle_to(pygame.Vector2(1, 0))
+        self.image = pygame.transform.rotate(self.image, self.angle)
+        self.rect = self.image.get_rect(center=position)
+        self.direction = direction
+        self.speed = 15
+    
+    def update(self):  
+        self.rect.move_ip(self.direction * self.speed)
+        print(self.direction)
+        if self.rect.left > SCREEN_WIDTH or self.rect.right < 0 or self.rect.top > SCREEN_HEIGHT or self.rect.bottom < 0:
+            self.kill()
+
 class Gun(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
-        self.shoot = glock_shoot_animation
-        self.image = self.shoot[0]
-        self.flipped_image = pygame.transform.flip(self.shoot[0], True, False).convert_alpha()
+        self.shoot_anim = glock_shoot_animation
+        self.image = self.shoot_anim[0]
+        self.flipped_image = pygame.transform.flip(self.shoot_anim[0], True, False).convert_alpha()
         self.rect = self.image.get_rect(midleft=player.sprite.get_position()+pygame.Vector2(0, 10))
-    
+        self.fire_rate = 1
+        self.last_shot = 0
+
+    def shoot(self,direction):
+        bullet = Bullet(self.rect.center, direction)
+        bullet_group.add(bullet)
+
+
+
     def update(self):
         self.rect.midleft = player.sprite.get_position() +pygame.Vector2(-10, 13)
         mouse_pos = pygame.mouse.get_pos()
@@ -96,15 +121,22 @@ class Gun(pygame.sprite.Sprite):
             self.rect.y -= self.rect.height/4
 
         if mouse_pos[0] < player_pos[0]: #aiming left
-            self.image = pygame.transform.rotate(pygame.transform.flip(self.shoot[0], False, True).convert_alpha(), angle).convert_alpha()
+            self.image = pygame.transform.rotate(pygame.transform.flip(self.shoot_anim[0], False, True).convert_alpha(), angle).convert_alpha()
             self.rect.x -= self.rect.width/2
         elif mouse_pos[0] > player_pos[0]: #aiming right
-            self.image = pygame.transform.rotate(self.shoot[0], angle).convert_alpha()
+            self.image = pygame.transform.rotate(self.shoot_anim[0], angle).convert_alpha()
+
+        if pygame.mouse.get_pressed()[0]:
+            current_time = pygame.time.get_ticks()
+            if current_time - self.last_shot > self.fire_rate * 1000:
+                self.shoot(direction.normalize())
+                self.last_shot = current_time
             
 
 #player sprite
 player = pygame.sprite.GroupSingle(Player())
 gun = pygame.sprite.GroupSingle(Gun())
+bullet_group = pygame.sprite.Group()
 #ground tile
 ground_tile = pygame.image.load("Assets/ground_tile.png").convert_alpha()
 tile_width, tile_height = ground_tile.get_size()
@@ -131,8 +163,12 @@ while True:
     player.sprite.player_input()
     player.sprite.update()
 
+    bullet_group.draw(screen)
+    bullet_group.update()
+
     gun.draw(screen)
     gun.sprite.update()
+
     
 
     screen.blit(text, (10, 10))
