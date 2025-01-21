@@ -46,6 +46,7 @@ zombie_death_sound = pygame.mixer.Sound("Assets/sounds/zombie_death.wav")
 zombie_death_sound.set_volume(0.95)
 background_music = pygame.mixer.Sound("Assets/sounds/doom theme.mp3")
 background_music.play(-1)
+cash_sound = pygame.mixer.Sound("Assets/sounds/kaching.wav")
 
 # random position but with excluded area
 def random_position(screen_width, screen_height, excluded_width, excluded_height):
@@ -66,6 +67,10 @@ def random_position(screen_width, screen_height, excluded_width, excluded_height
     x = random.randint(area[2], area[3])  # Szerokość (x)
     return x, y
 
+def update_positions(sprites, offset_x, offset_y):
+    for sprite in sprites:
+        sprite.rect.x += offset_x
+        sprite.rect.y += offset_y
 
 money = 0
 def add_money(amount):
@@ -176,31 +181,33 @@ class Gun(pygame.sprite.Sprite):
 
     def upgrade(self, upgrade_type):
         if upgrade_type == "damage" and self.upgrade_level[0] < 5:
+            remove_money(self.upgrade_cost(upgrade_type))
             self.gun_damage += 5
             self.upgrade_level[0] += 1
-            remove_money(self.upgrade_cost(upgrade_type))
         elif upgrade_type == "fire_rate" and self.upgrade_level[1] < 5:
+            remove_money(self.upgrade_cost(upgrade_type))
             self.fire_rate *= 0.9
             self.upgrade_level[1] += 1
-            remove_money(self.upgrade_cost(upgrade_type))
         elif upgrade_type == "accuracy" and self.upgrade_level[2] < 5:
+            remove_money(self.upgrade_cost(upgrade_type))
             self.accuracy -= 0.04
             self.upgrade_level[2] += 1
-            remove_money(self.upgrade_cost(upgrade_type))
         elif upgrade_type == "new_gun" and self.gun_type < 2:
+            remove_money(self.upgrade_cost(upgrade_type))
             self.upgrade_level = [1,1,1]
             self.gun_type += 1
-            remove_money(self.upgrade_cost(upgrade_type))
             if self.gun_type == 1:
                 self.gun_damage = 20
                 self.fire_rate = 0.06
                 self.accuracy = 0.35
                 self.shoot_anim = guns_sprites[1]
+                self.flipped_image = pygame.transform.flip(self.shoot_anim[0], False, True).convert_alpha()
             elif self.gun_type == 2:
                 self.gun_damage = 30
                 self.fire_rate = 0.04
                 self.accuracy = 0.25
                 self.shoot_anim = guns_sprites[2]
+                self.flipped_image = pygame.transform.flip(self.shoot_anim[0], False, True).convert_alpha()
 
     def upgrade_cost(self, upgrade_type):
         if upgrade_type == "damage":
@@ -236,9 +243,6 @@ class Gun(pygame.sprite.Sprite):
             elif self.gun_type ==2:
                 return "AK47"
 
-    def update_gun_image(self):
-        pass
-
     def update(self):
         self.rect.midleft = player.sprite.get_position() +pygame.Vector2(-10, 13)
         mouse_pos = pygame.mouse.get_pos()
@@ -270,7 +274,7 @@ class Zombie(pygame.sprite.Sprite):
         self.image = self.walk[0]
         self.image_index = 0
         self.animation_speed = 0.1
-        self.money = 70
+        self.money = 500
         self.damage = damage
 
         self.health = hp
@@ -523,12 +527,16 @@ def shop_menu():
                 if event.key == pygame.K_RETURN:
                     if selected_option == 0 and gun.sprite.upgrade_level[0]<5 and money >= gun.sprite.upgrade_cost("damage"): # Damage+
                         gun.sprite.upgrade("damage")
+                        cash_sound.play()
                     elif selected_option == 1 and gun.sprite.upgrade_level[1]<5 and money >= gun.sprite.upgrade_cost("fire_rate"): # Fire rate+
                         gun.sprite.upgrade("fire_rate")
+                        cash_sound.play()
                     elif selected_option == 2 and gun.sprite.upgrade_level[2]<5 and money >= gun.sprite.upgrade_cost("accuracy"): # Accuracy+
                         gun.sprite.upgrade("accuracy")
+                        cash_sound.play()
                     elif selected_option == 3 and gun.sprite.gun_type<2 and money >= gun.sprite.upgrade_cost("new_gun"): # New gun
                         gun.sprite.upgrade("new_gun")
+                        cash_sound.play()
                     elif money < gun.sprite.upgrade_cost(upgrades[selected_option]):
                         display_fading_text(screen, "Not enough money", pixel_font, RED, 0.3, 1.3)
 
