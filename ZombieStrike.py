@@ -24,15 +24,19 @@ HIGHLIGHT = (255, 255, 0)
 
 # Ekran
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-pygame.display.set_caption("Zombie Strike")
+pygame.display.set_caption("QUACK ATTACK")
 clock = pygame.time.Clock()
 pixel_font = pygame.font.Font("Assets/font/ByteBounce.ttf", 32)
+menu_font = pygame.font.Font("Assets/font/ByteBounce.ttf", 64)
 
 resourceManager = resourceManager.ResourceManager()
 
 ducky_walk_animation = resourceManager.load_animation("Assets/ducky_walk-sheet.png", 25, 28, 6, 2)
 ducky_idle_animation = resourceManager.load_animation("Assets/ducky_idle-sheet.png", 25, 28, 2, 2)
 glock_shoot_animation = resourceManager.load_animation("Assets/guns/glock [64x32]/glock [SHOOT].png", 39, 31, 12, 1)
+submachine_shoot_animation = resourceManager.load_animation("Assets/guns/Submachine - MP5A3 [80x48].png", 57, 27, 1, 0.9)
+ak47_shoot_animation = resourceManager.load_animation("Assets/guns/AK 47 [96x48].png", 76, 22, 1, 0.9)
+guns_sprites = [glock_shoot_animation, submachine_shoot_animation, ak47_shoot_animation]
 ducky_damage_sound = pygame.mixer.Sound("Assets/sounds/ducky_damage.wav")
 bullet_image = resourceManager.load_image("Assets/guns/bullet.png")
 shoot_sound = pygame.mixer.Sound("Assets/sounds/shoot.wav")
@@ -62,9 +66,20 @@ def random_position(screen_width, screen_height, excluded_width, excluded_height
     x = random.randint(area[2], area[3])  # Szerokość (x)
     return x, y
 
+
+money = 0
+def add_money(amount):
+    global money
+    money += amount
+def remove_money(amount):
+    global money
+    money -= amount
+
+isPlayerDead = True
+
 scale = 2
 class Player(pygame.sprite.Sprite):
-    def __init__(self):
+    def __init__(self,max_health=100):
         super().__init__()
         self.walk = ducky_walk_animation
         self.idle = ducky_idle_animation
@@ -75,7 +90,8 @@ class Player(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.center = (SCREEN_WIDTH/2, SCREEN_HEIGHT/2)
 
-        self.health = 100
+        self.max_health = max_health        
+        self.health = self.max_health
         self.speed = 4
         self.direction = 1
         self.movement = pygame.Vector2(0, 0)
@@ -92,6 +108,9 @@ class Player(pygame.sprite.Sprite):
             if self.image_index >= len(self.idle):
                 self.image_index = 0
             self.image = self.idle[int(self.image_index)] if self.direction == 1 else pygame.transform.flip(self.idle[int(self.image_index)], True, False).convert_alpha()
+        if self.health <= 0:
+            pass
+
 
     def player_input(self):
         keys = pygame.key.get_pressed()
@@ -130,16 +149,19 @@ class Bullet(pygame.sprite.Sprite):
             player_bullets.remove(self)
 
 class Gun(pygame.sprite.Sprite):
-    def __init__(self, damage=10):
+    def __init__(self, damage=10, fire_rate=0.1, accuracy=0.5,gun_type=0):
         super().__init__()
-        self.shoot_anim = glock_shoot_animation
+        self.shoot_anim = guns_sprites[gun_type]
         self.image = self.shoot_anim[0]
-        self.flipped_image = pygame.transform.flip(self.shoot_anim[0], False, True).convert_alpha()
+        self.flipped_image = pygame.transform.flip(self.image, False, True).convert_alpha()
         self.rect = self.image.get_rect(midleft=player.sprite.get_position()+pygame.Vector2(0, 10))
-        self.fire_rate = 0.1
+        self.fire_rate = fire_rate
         self.last_shot = 0
-        self.accuracy = 0.5 # 0 - best accuracy, 1 - worst accuracy
+        self.accuracy = accuracy # 0 - best accuracy, 1 - worst accuracy
         self.gun_damage = damage
+
+        self.upgrade_level = [1,1,1]
+        self.gun_type = gun_type  # 0 - glock, 1 - submachine, 2 - ak47
 
     def shoot(self,direction):
         bullet = Bullet(self.rect.center, direction, self.gun_damage)
@@ -151,6 +173,71 @@ class Gun(pygame.sprite.Sprite):
         # self.rect = self.image.get_rect(center=player.sprite.get_position()+pygame.Vector2(0, 9))
         # self.rect = self.image.get_rect(center=player.sprite.get_position()+pygame.Vector2(0, 10))
         #screen.blit(self.image, self.rect)
+
+    def upgrade(self, upgrade_type):
+        if upgrade_type == "damage" and self.upgrade_level[0] < 5:
+            self.gun_damage += 5
+            self.upgrade_level[0] += 1
+            remove_money(self.upgrade_cost(upgrade_type))
+        elif upgrade_type == "fire_rate" and self.upgrade_level[1] < 5:
+            self.fire_rate *= 0.9
+            self.upgrade_level[1] += 1
+            remove_money(self.upgrade_cost(upgrade_type))
+        elif upgrade_type == "accuracy" and self.upgrade_level[2] < 5:
+            self.accuracy -= 0.04
+            self.upgrade_level[2] += 1
+            remove_money(self.upgrade_cost(upgrade_type))
+        elif upgrade_type == "new_gun" and self.gun_type < 2:
+            self.upgrade_level = [1,1,1]
+            self.gun_type += 1
+            remove_money(self.upgrade_cost(upgrade_type))
+            if self.gun_type == 1:
+                self.gun_damage = 20
+                self.fire_rate = 0.06
+                self.accuracy = 0.35
+                self.shoot_anim = guns_sprites[1]
+            elif self.gun_type == 2:
+                self.gun_damage = 30
+                self.fire_rate = 0.04
+                self.accuracy = 0.25
+                self.shoot_anim = guns_sprites[2]
+
+    def upgrade_cost(self, upgrade_type):
+        if upgrade_type == "damage":
+            return 50*(self.gun_type+1)*self.upgrade_level[0]
+        elif upgrade_type == "fire_rate":
+            return 50*(self.gun_type+1)*self.upgrade_level[1]
+        elif upgrade_type == "accuracy":
+            return 50*(self.gun_type+1)*self.upgrade_level[2]
+        elif upgrade_type == "new_gun":
+            return (1000 * (self.gun_type+1))
+    
+    def return_upgrade_level(self, upgrade_type):
+        if upgrade_type == "damage":
+            if self.upgrade_level[0] < 5:
+                return str(self.upgrade_level[0])
+            else:
+                return "MAX" 
+        elif upgrade_type == "fire_rate":
+            if self.upgrade_level[1] < 5:
+                return str(self.upgrade_level[1])
+            else:
+                return "MAX"
+        elif upgrade_type == "accuracy":
+            if self.upgrade_level[2] < 5:
+                return str(self.upgrade_level[2])
+            else:
+                return "MAX"
+        elif upgrade_type == "new_gun":
+            if self.gun_type == 0:
+                return "Glock"
+            elif self.gun_type == 1:
+                return "MP5"
+            elif self.gun_type ==2:
+                return "AK47"
+
+    def update_gun_image(self):
+        pass
 
     def update(self):
         self.rect.midleft = player.sprite.get_position() +pygame.Vector2(-10, 13)
@@ -183,6 +270,8 @@ class Zombie(pygame.sprite.Sprite):
         self.image = self.walk[0]
         self.image_index = 0
         self.animation_speed = 0.1
+        self.money = 70
+        self.damage = damage
 
         self.health = hp
 
@@ -205,9 +294,8 @@ class Zombie(pygame.sprite.Sprite):
 
         if self.rect.colliderect(player.sprite.rect):
             ducky_damage_sound.play()
-            player.sprite.health -= 10
-            
-            self.kill()
+            player.sprite.health -= self.damage
+            self.health = 0
         for bullet in bullet_group:
             if self.rect.colliderect(bullet.rect):
                 self.health -= 10
@@ -217,6 +305,7 @@ class Zombie(pygame.sprite.Sprite):
             self.kill()
             wave_manager.zombie_killed()
             zombie_death_sound.play()
+            add_money(self.money)
 
 def zombieSpawn(delay=100):
     zombie = Zombie()
@@ -276,7 +365,17 @@ class WaveManager:
 
         if self.zombies_killed >= self.zombies_to_spawn:
             self.next_wave()
-            
+    
+    def reset_waves(self):
+        self.wave_number = 1
+        self.zombies_to_spawn = 5
+        self.spawned_zombies = 0
+        self.zombies_killed = 0
+        self.zombie_hp = 20
+        self.zombie_speed = 1.3
+        self.zombie_damage = 10
+        self.spawn_delay = 1000  # milliseconds
+        self.last_spawn_time = pygame.time.get_ticks()
 
     def next_wave(self):
         self.wave_number += 1
@@ -286,18 +385,25 @@ class WaveManager:
         self.zombie_hp += 5
         if self.zombie_speed <= 4.5:
             self.zombie_speed += 0.2
-        #self.spawn_delay = max(200, self.spawn_delay - 100)  # Decrease spawn delay but not below 200ms
-        display_fading_text(screen, f"Wave {self.wave_number}", pixel_font, WHITE, 3, 1)
+        display_fading_text(screen, f"Wave {self.wave_number}", pixel_font, WHITE, 1, 1)
         
         print(f"Wave {self.wave_number}")
 
     def zombie_killed(self):
         self.zombies_killed += 1
 
+#PLAYER STATS
+player_health = 10
+#GUN STATS
+gun_type = 1
+gun_base_damage = 10
+gun_damage = gun_base_damage * gun_type
+gun_base_fire_rate = 0.1
+gun_fire_rate = gun_base_fire_rate / (gun_type*0.5)
 
 #player sprite
-player = pygame.sprite.GroupSingle(Player())
-gun = pygame.sprite.GroupSingle(Gun())
+player = pygame.sprite.GroupSingle(Player(player_health))
+gun = pygame.sprite.GroupSingle(Gun(gun_damage, gun_fire_rate))
 bullet_group = pygame.sprite.Group()
 zombie_group = pygame.sprite.Group()
 
@@ -316,11 +422,6 @@ barell_width, barell_height = barell_surf.get_size()
 barell_surf = pygame.transform.scale(barell_surf, (barell_width*scale,barell_height*scale))
 barell_rect = barell_surf.get_rect(center=(100, 100))
 
-text = pixel_font.render("Zombie Strike", True, WHITE)
-
-
-# Ustawienia ekranu
-pygame.display.set_caption("Menu Główne")
 
 # Funkcja do wyświetlania tekstu
 def draw_text(text, font, color, surface, x, y):
@@ -330,18 +431,19 @@ def draw_text(text, font, color, surface, x, y):
 
 # Menu główne
 def main_menu():
-    menu_options = ["Start", "Opcje", "Wyjście"]
+    menu_options = ["Start", "Sklep", "Wyjście"]
     selected_option = 0
 
     running = True
     while running:
         screen.fill(BLACK)
-        draw_text("Menu Główne", pixel_font, WHITE, screen, SCREEN_WIDTH // 2, 100)
+        draw_text("QUACK ATTACK", menu_font, RED, screen, SCREEN_WIDTH // 2, 100)
+        draw_text("Zombie Quackdown", pixel_font, GREEN, screen, SCREEN_WIDTH // 2, 130)
 
-        # Renderowanie opcji menu
+        # Render menu options
         for i, option in enumerate(menu_options):
             color = HIGHLIGHT if i == selected_option else WHITE
-            draw_text(option, pixel_font, color, screen, SCREEN_WIDTH // 2, 200 + i * 100)
+            draw_text(option, pixel_font, color, screen, SCREEN_WIDTH // 2, 250 + i * 100)
 
         pygame.display.flip()
 
@@ -357,10 +459,10 @@ def main_menu():
                     selected_option = (selected_option + 1) % len(menu_options)
                 if event.key == pygame.K_RETURN:
                     if selected_option == 0:  # Start gry
-                        #display_fading_text(screen, "Wave 1", pixel_font, WHITE, 3, 1)
+                        display_fading_text(screen, "Wave 1", pixel_font, WHITE, 1, 1)
                         game_loop()
-                    elif selected_option == 1:  # Opcje
-                        options_menu()
+                    elif selected_option == 1:  # sklep
+                        shop_menu()
                     elif selected_option == 2:  # Wyjście
                         pygame.quit()
                         sys.exit()
@@ -380,16 +482,63 @@ def options_menu():
                 pygame.quit()
                 sys.exit()
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:  # Powrót do menu głównego
+                if event.key == pygame.K_ESCAPE:  # Powrót do gry
                     running = False
 
 
 
+def shop_menu():
+    shop_options = [
+    "   Damage+       " , 
+    "   Fire rate+       ",
+    "   Accuracy+       ",
+    "   NEW GUN       "]
+    selected_option = 0
+    upgrades = ["damage", "fire_rate", "accuracy", "new_gun"]
+    running = True
+    while running:
+        screen.fill(BLACK)
+        draw_text("Sklep", menu_font, WHITE, screen, SCREEN_WIDTH // 2, 100)
 
+        # Renderowanie opcji menu
+        for i, option in enumerate(shop_options):
+            color = HIGHLIGHT if i == selected_option else WHITE
+            draw_text(str(gun.sprite.upgrade_cost(upgrades[i]))+option+ gun.sprite.return_upgrade_level(upgrades[i]), pixel_font, color, screen, SCREEN_WIDTH // 2, 200 + i * 50)
+
+        draw_text("$"+str(money),pixel_font,GREEN,screen ,10+len(str(money))*6, 10)
+
+        pygame.display.flip()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:  # Powrót do menu głównego
+                    running = False
+                if event.key == pygame.K_UP:
+                    selected_option = (selected_option - 1) % len(shop_options)
+                if event.key == pygame.K_DOWN:
+                    selected_option = (selected_option + 1) % len(shop_options)
+                if event.key == pygame.K_RETURN:
+                    if selected_option == 0 and gun.sprite.upgrade_level[0]<5 and money >= gun.sprite.upgrade_cost("damage"): # Damage+
+                        gun.sprite.upgrade("damage")
+                    elif selected_option == 1 and gun.sprite.upgrade_level[1]<5 and money >= gun.sprite.upgrade_cost("fire_rate"): # Fire rate+
+                        gun.sprite.upgrade("fire_rate")
+                    elif selected_option == 2 and gun.sprite.upgrade_level[2]<5 and money >= gun.sprite.upgrade_cost("accuracy"): # Accuracy+
+                        gun.sprite.upgrade("accuracy")
+                    elif selected_option == 3 and gun.sprite.gun_type<2 and money >= gun.sprite.upgrade_cost("new_gun"): # New gun
+                        gun.sprite.upgrade("new_gun")
+                    elif money < gun.sprite.upgrade_cost(upgrades[selected_option]):
+                        display_fading_text(screen, "Not enough money", pixel_font, RED, 0.3, 1.3)
 
 
 def game_loop():
     running = True
+    for zombie in zombie_group:
+        zombie.kill()
+    wave_manager.reset_waves()
+    player.sprite.health = player.sprite.max_health
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -398,25 +547,25 @@ def game_loop():
 
         keys = pygame.key.get_pressed()
         
-        if keys[pygame.K_a]:
+        if keys[pygame.K_a] and not keys[pygame.K_d]:
             display_scroll[0] -= player.sprite.speed * -player.sprite.movement.x
             for bullet in player_bullets:
                 bullet.rect.x += player.sprite.speed
             for zombie in zombie_group:
                 zombie.rect.x += player.sprite.speed
-        if keys[pygame.K_d]:
+        if keys[pygame.K_d] and not keys[pygame.K_a]:
             display_scroll[0] += player.sprite.speed * player.sprite.movement.x
             for bullet in player_bullets:
                 bullet.rect.x -= player.sprite.speed
             for zombie in zombie_group:
                 zombie.rect.x -= player.sprite.speed
-        if keys[pygame.K_w]:
+        if keys[pygame.K_w] and not keys[pygame.K_s]:
             display_scroll[1] -= player.sprite.speed * -player.sprite.movement.y
             for bullet in player_bullets:
                 bullet.rect.y += player.sprite.speed
             for zombie in zombie_group:
                 zombie.rect.y += player.sprite.speed
-        if keys[pygame.K_s]:
+        if keys[pygame.K_s] and not keys[pygame.K_w]:
             display_scroll[1] += player.sprite.speed * player.sprite.movement.y
             for bullet in player_bullets:
                 bullet.rect.y -= player.sprite.speed
@@ -441,14 +590,19 @@ def game_loop():
         zombie_group.draw(screen)
         zombie_group.update()
 
-
         gun.draw(screen)
         gun.sprite.update()
 
-        screen.blit(text, (10, 10))
+        draw_text("$"+str(money),pixel_font,GREEN,screen ,10+(len(str(money))+1)*6, 10)
+        draw_text(str(player.sprite.health)+"HP",pixel_font,RED,screen ,SCREEN_WIDTH-((len(str(player.sprite.health))+2)*6)-7, 10)
+        
 
         pygame.display.update()
         clock.tick(FPS)
+        if player.sprite.health <= 0:
+            display_fading_text(screen, "Game Over", menu_font, RED, 1.5, 0.5)
+            
+            running = False
 
 # Uruchom menu główne
 main_menu()
