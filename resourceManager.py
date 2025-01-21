@@ -27,3 +27,4 @@ class ResourceManager:
             frames = [sprite_sheet.get_image(i, sprite_width, sprite_height, scale) for i in range(frame_count)]
             self.animations[path] = frames
         return self.animations[path]
+    

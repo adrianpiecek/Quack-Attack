@@ -3,7 +3,7 @@ import random
 import spriteSheet
 from itertools import cycle
 import math
-import resourceManager
+import resourceManager, audioManager
 import time
 import sys
 
@@ -30,6 +30,7 @@ pixel_font = pygame.font.Font("Assets/font/ByteBounce.ttf", 32)
 menu_font = pygame.font.Font("Assets/font/ByteBounce.ttf", 64)
 
 resourceManager = resourceManager.ResourceManager()
+audioManager = audioManager.AudioManager()
 
 ducky_walk_animation = resourceManager.load_animation("Assets/ducky_walk-sheet.png", 25, 28, 6, 2)
 ducky_idle_animation = resourceManager.load_animation("Assets/ducky_idle-sheet.png", 25, 28, 2, 2)
@@ -37,16 +38,24 @@ glock_shoot_animation = resourceManager.load_animation("Assets/guns/glock [64x32
 submachine_shoot_animation = resourceManager.load_animation("Assets/guns/Submachine - MP5A3 [80x48].png", 57, 27, 1, 0.9)
 ak47_shoot_animation = resourceManager.load_animation("Assets/guns/AK 47 [96x48].png", 76, 22, 1, 0.9)
 guns_sprites = [glock_shoot_animation, submachine_shoot_animation, ak47_shoot_animation]
-ducky_damage_sound = pygame.mixer.Sound("Assets/sounds/ducky_damage.wav")
 bullet_image = resourceManager.load_image("Assets/guns/bullet.png")
-shoot_sound = pygame.mixer.Sound("Assets/sounds/shoot.wav")
-shoot_sound.set_volume(0.4)
 zombie_walk_animation = resourceManager.load_animation("Assets/zombie_run-sheet.png", 23, 23, 7, 2)
-zombie_death_sound = pygame.mixer.Sound("Assets/sounds/zombie_death.wav")
-zombie_death_sound.set_volume(0.95)
-background_music = pygame.mixer.Sound("Assets/sounds/doom theme.mp3")
+
+# ducky_damage_sound = pygame.mixer.Sound("Assets/sounds/ducky_damage.wav")
+#shoot_sound = pygame.mixer.Sound("Assets/sounds/shoot.wav")
+#shoot_sound.set_volume(0.4)
+#zombie_death_sound = pygame.mixer.Sound("Assets/sounds/zombie_death.wav")
+#zombie_death_sound.set_volume(0.95)
+#background_music = pygame.mixer.Sound("Assets/sounds/doom theme.mp3")
+#cash_sound = pygame.mixer.Sound("Assets/sounds/kaching.wav")
+
+# Sounds
+ducky_damage_sound = audioManager.load_sound("Assets/sounds/ducky_damage.wav", 1)
+shoot_sound = audioManager.load_sound("Assets/sounds/shoot.wav", 0.4)
+zombie_death_sound = audioManager.load_sound("Assets/sounds/zombie_death.wav", 0.95)
+background_music = audioManager.load_sound("Assets/sounds/doom theme.mp3", 1)
+cash_sound = audioManager.load_sound("Assets/sounds/kaching.wav", 1)
 background_music.play(-1)
-cash_sound = pygame.mixer.Sound("Assets/sounds/kaching.wav")
 
 # random position but with excluded area
 def random_position(screen_width, screen_height, excluded_width, excluded_height):
@@ -79,7 +88,6 @@ def add_money(amount):
 def remove_money(amount):
     global money
     money -= amount
-
 isPlayerDead = True
 
 scale = 2
@@ -499,6 +507,12 @@ def shop_menu():
     "   NEW GUN       "]
     selected_option = 0
     upgrades = ["damage", "fire_rate", "accuracy", "new_gun"]
+    upgrade_actions = {
+    0: lambda: gun.sprite.upgrade("damage"),
+    1: lambda: gun.sprite.upgrade("fire_rate"),
+    2: lambda: gun.sprite.upgrade("accuracy"),
+    3: lambda: gun.sprite.upgrade("new_gun"),
+    }
     running = True
     while running:
         screen.fill(BLACK)
@@ -525,21 +539,9 @@ def shop_menu():
                 if event.key == pygame.K_DOWN:
                     selected_option = (selected_option + 1) % len(shop_options)
                 if event.key == pygame.K_RETURN:
-                    if selected_option == 0 and gun.sprite.upgrade_level[0]<5 and money >= gun.sprite.upgrade_cost("damage"): # Damage+
-                        gun.sprite.upgrade("damage")
+                   if money >= gun.sprite.upgrade_cost(upgrades[selected_option]) and selected_option in upgrade_actions:
+                        upgrade_actions[selected_option]()
                         cash_sound.play()
-                    elif selected_option == 1 and gun.sprite.upgrade_level[1]<5 and money >= gun.sprite.upgrade_cost("fire_rate"): # Fire rate+
-                        gun.sprite.upgrade("fire_rate")
-                        cash_sound.play()
-                    elif selected_option == 2 and gun.sprite.upgrade_level[2]<5 and money >= gun.sprite.upgrade_cost("accuracy"): # Accuracy+
-                        gun.sprite.upgrade("accuracy")
-                        cash_sound.play()
-                    elif selected_option == 3 and gun.sprite.gun_type<2 and money >= gun.sprite.upgrade_cost("new_gun"): # New gun
-                        gun.sprite.upgrade("new_gun")
-                        cash_sound.play()
-                    elif money < gun.sprite.upgrade_cost(upgrades[selected_option]):
-                        display_fading_text(screen, "Not enough money", pixel_font, RED, 0.3, 1.3)
-
 
 def game_loop():
     running = True
