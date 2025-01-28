@@ -21,7 +21,6 @@ GREEN = (0, 255, 0)
 HIGHLIGHT = (255, 255, 0)
 
 
-
 # Ekran
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption("QUACK ATTACK")
@@ -197,7 +196,6 @@ def options_menu():
                     running = False
 
 
-
 def shop_menu():
     shop_options = [
     "   Damage+       " , 
@@ -266,6 +264,10 @@ def update_game_logic_and_draw():
     zombie_group.draw(screen)
     gun.draw(screen)
 
+    # HUD
+    draw_text("$"+str(money),pixel_font,GREEN,screen ,10+(len(str(money))+1)*6, 10)
+    draw_text(str(player.sprite.health)+"HP",pixel_font,RED,screen ,SCREEN_WIDTH-((len(str(player.sprite.health))+2)*6)-7, 10)
+
 
 
 def game_loop():
@@ -283,9 +285,6 @@ def game_loop():
         handle_player_movement()
 
         update_game_logic_and_draw()
-
-        draw_text("$"+str(money),pixel_font,GREEN,screen ,10+(len(str(money))+1)*6, 10)
-        draw_text(str(player.sprite.health)+"HP",pixel_font,RED,screen ,SCREEN_WIDTH-((len(str(player.sprite.health))+2)*6)-7, 10)
 
         pygame.display.update()
         clock.tick(FPS)

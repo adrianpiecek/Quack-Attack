@@ -1,5 +1,6 @@
 import pygame
 import random
+import math
 # pixels from the edge of the screen where zombies can spawn
 EXCLUDED_WIDTH, EXCLUDED_HEIGHT = 20, 20
 SCREEN_WIDTH, SCREEN_HEIGHT = 800, 600
@@ -34,6 +35,7 @@ class Zombie(pygame.sprite.Sprite):
         self.money = 500
         self.damage = damage
 
+        self.max_health = hp
         self.health = hp
 
         self.rect = self.image.get_rect()
@@ -51,12 +53,34 @@ class Zombie(pygame.sprite.Sprite):
         self.player_bullets = player_bullets
         self.add_money = add_money
 
+    def change_color(self, image, health_ratio):
+        colored_image = image.copy()
+        pixels = pygame.PixelArray(colored_image)
+        red_intensity = int(255 * (1 - health_ratio))
+        for x in range(pixels.shape[0]):
+            for y in range(pixels.shape[1]):
+                # getting color of pixel
+                color = colored_image.unmap_rgb(pixels[x, y])
+                # if pixel is not transparent
+                if color.a > 0:
+                    # mixing colors with red
+                    new_color = (
+                        min(255, color.r + red_intensity),
+                        max(0, color.g - red_intensity),
+                        max(0, color.b - red_intensity),
+                        color.a
+                    )
+                    pixels[x, y] = new_color
+        return colored_image
 
     def update(self):
         self.image_index += self.animation_speed
         if self.image_index >= len(self.walk):
             self.image_index = 0
-        self.image = self.walk[int(self.image_index)]
+
+        health_ratio = max(0, self.health / self.max_health)  # Procent zdrowia (0-1)
+        changed_image = self.change_color(self.walk[int(self.image_index)], health_ratio)
+        self.image = changed_image
 
         player_pos = self.player.sprite.get_position()
         self.direction = pygame.Vector2(player_pos[0] - self.rect.center[0], player_pos[1] - self.rect.center[1])
