@@ -52,13 +52,13 @@ If you'd like to contribute to this project, feel free to fork the repository an
 
 ## Credits
 
-    Developer: Adrian Piecek
+**Developer**: Adrian Piecek
 
-    Inspired by: Brotato
+**Inspired by**: Brotato
 
-    Art and Sound: Main Theme - Doom Soundtrack, rest - itch.io or made myself
+**Art and Sound**: Main Theme - Doom Soundtrack, rest - itch.io or made myself
 
-    Pygame: pygame.org
+**Pygame**: pygame.org
 
 ## Screenshots
 
