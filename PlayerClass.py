@@ -3,8 +3,9 @@ import pygame
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
 
+
 class Player(pygame.sprite.Sprite):
-    def __init__(self,max_health=100,ducky_walk_animation=[],ducky_idle_animation=[]):
+    def __init__(self, max_health=100, ducky_walk_animation=[], ducky_idle_animation=[]):
         super().__init__()
         self.walk = ducky_walk_animation
         self.idle = ducky_idle_animation
@@ -15,7 +16,7 @@ class Player(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.center = (SCREEN_WIDTH/2, SCREEN_HEIGHT/2)
 
-        self.max_health = max_health        
+        self.max_health = max_health
         self.health = self.max_health
         self.speed = 4
         self.direction = 1
@@ -25,14 +26,16 @@ class Player(pygame.sprite.Sprite):
         self.image_index += self.animation_speed
 
         if self.movement.length() > 0:
-            #self.rect.move_ip(self.movement * self.speed)
+            # self.rect.move_ip(self.movement * self.speed)
             if self.image_index >= len(self.walk):
                 self.image_index = 0
-            self.image = self.walk[int(self.image_index)] if self.direction == 1 else pygame.transform.flip(self.walk[int(self.image_index)], True, False).convert_alpha()
+            self.image = self.walk[int(self.image_index)] if self.direction == 1 else pygame.transform.flip(
+                self.walk[int(self.image_index)], True, False).convert_alpha()
         else:
             if self.image_index >= len(self.idle):
                 self.image_index = 0
-            self.image = self.idle[int(self.image_index)] if self.direction == 1 else pygame.transform.flip(self.idle[int(self.image_index)], True, False).convert_alpha()
+            self.image = self.idle[int(self.image_index)] if self.direction == 1 else pygame.transform.flip(
+                self.idle[int(self.image_index)], True, False).convert_alpha()
         if self.health <= 0:
             pass
 
@@ -50,7 +53,8 @@ class Player(pygame.sprite.Sprite):
             self.movement.x = 1
             self.direction = 1
         if self.movement.x != 0 and self.movement.y != 0:
-            self.movement *= 0.77 # mathematicly accurate normalization (0.707) felt too slow when moving diagonally
+            # mathematicly accurate normalization (0.707) felt too slow when moving diagonally
+            self.movement *= 0.77
 
     def get_position(self):
         return self.rect.center

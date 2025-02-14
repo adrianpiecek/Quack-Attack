@@ -6,6 +6,8 @@ EXCLUDED_WIDTH, EXCLUDED_HEIGHT = 20, 20
 SCREEN_WIDTH, SCREEN_HEIGHT = 800, 600
 
 # random position but with excluded area
+
+
 def random_position(screen_width, screen_height, excluded_width, excluded_height):
     allowed_areas = [
         # Górny obszar (nad wykluczoną strefą)
@@ -15,9 +17,10 @@ def random_position(screen_width, screen_height, excluded_width, excluded_height
         # Lewy obszar (na lewo od wykluczonej strefy)
         (excluded_height, screen_height - excluded_height, 0, excluded_width),
         # Prawy obszar (na prawo od wykluczonej strefy)
-        (excluded_height, screen_height - excluded_height, screen_width - excluded_width, screen_width),
+        (excluded_height, screen_height - excluded_height,
+         screen_width - excluded_width, screen_width),
     ]
-    
+
     # Wybierz losowy obszar
     area = random.choice(allowed_areas)
     y = random.randint(area[0], area[1])  # Wysokość (y)
@@ -26,20 +29,21 @@ def random_position(screen_width, screen_height, excluded_width, excluded_height
 
 
 class Zombie(pygame.sprite.Sprite):
-    def __init__(self,hp, speed, damage, zombie_walk_animation, zombie_death_sound, ducky_damage_sound, wave_manager, player, bullet_group, player_bullets, add_money):
+    def __init__(self, hp, speed, damage, zombie_walk_animation, zombie_death_sound, ducky_damage_sound, wave_manager, player, bullet_group, player_bullets, add_money):
         super().__init__()
         self.walk = zombie_walk_animation
         self.image = self.walk[0]
         self.image_index = 0
         self.animation_speed = 0.1
-        self.money = 500
+        self.money = 15
         self.damage = damage
 
         self.max_health = hp
         self.health = hp
 
         self.rect = self.image.get_rect()
-        self.rect.center = random_position(SCREEN_WIDTH, SCREEN_HEIGHT, EXCLUDED_WIDTH, EXCLUDED_HEIGHT)
+        self.rect.center = random_position(
+            SCREEN_WIDTH, SCREEN_HEIGHT, EXCLUDED_WIDTH, EXCLUDED_HEIGHT)
 
         self.speed = speed
         self.direction = pygame.Vector2(0, 0)
@@ -78,14 +82,18 @@ class Zombie(pygame.sprite.Sprite):
         if self.image_index >= len(self.walk):
             self.image_index = 0
 
-        health_ratio = max(0, self.health / self.max_health)  # Procent zdrowia (0-1)
-        changed_image = self.change_color(self.walk[int(self.image_index)], health_ratio)
+        # Procent zdrowia (0-1)
+        health_ratio = max(0, self.health / self.max_health)
+        changed_image = self.change_color(
+            self.walk[int(self.image_index)], health_ratio)
         self.image = changed_image
 
         player_pos = self.player.sprite.get_position()
-        self.direction = pygame.Vector2(player_pos[0] - self.rect.center[0], player_pos[1] - self.rect.center[1])
+        self.direction = pygame.Vector2(
+            player_pos[0] - self.rect.center[0], player_pos[1] - self.rect.center[1])
         self.direction = self.direction.normalize()
-        self.rect.move_ip(self.direction * self.speed * random.uniform(0.80, 1.20))
+        self.rect.move_ip(self.direction * self.speed *
+                          random.uniform(0.80, 1.20))
 
         if self.rect.colliderect(self.player.sprite.rect):
             self.ducky_damage_sound.play()
