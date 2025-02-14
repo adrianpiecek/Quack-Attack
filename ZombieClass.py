@@ -56,7 +56,7 @@ class Zombie(pygame.sprite.Sprite):
     def change_color(self, image, health_ratio):
         colored_image = image.copy()
         pixels = pygame.PixelArray(colored_image)
-        red_intensity = int(255 * (1 - health_ratio))
+        red_intensity = int(200 * (1 - health_ratio))
         for x in range(pixels.shape[0]):
             for y in range(pixels.shape[1]):
                 # getting color of pixel

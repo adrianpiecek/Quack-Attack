@@ -36,7 +36,6 @@ class Player(pygame.sprite.Sprite):
         if self.health <= 0:
             pass
 
-
     def player_input(self):
         keys = pygame.key.get_pressed()
         self.movement = pygame.Vector2(0, 0)

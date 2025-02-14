@@ -55,25 +55,26 @@ upgrades_enum = {
     "new_gun": 3
 }
 
+
 def update_positions(sprites, offset_x, offset_y):
     for sprite in sprites:
         sprite.rect.x += offset_x
         sprite.rect.y += offset_y
 
+
 money = 0
 def add_money(amount):
     global money
     money += amount
+
 def remove_money(amount):
     global money
     money -= amount
-isPlayerDead = True
 
-scale = 2
+isPlayerDead = True
 
 
 def display_fading_text(screen, text, font, color, duration, fade_duration):
-
     # Renderowanie tekstu
     text_surface = font.render(text, True, color)
     text_rect = text_surface.get_rect(center=(screen.get_width() // 2, screen.get_height() // 2))
@@ -110,7 +111,7 @@ gun_damage = 10
 gun_fire_rate = 0.1
 gun_accuracy = 0.1
 
-
+scale = 2 # scale for making saome small sprites bigger
 #player sprite
 player = pygame.sprite.GroupSingle(Player(player_health,ducky_walk_animation,ducky_idle_animation))
 bullet_group = pygame.sprite.Group()
@@ -138,6 +139,7 @@ def draw_text(text, font, color, surface, x, y):
     text_obj = font.render(text, True, color)
     text_rect = text_obj.get_rect(center=(x, y))
     surface.blit(text_obj, text_rect)
+
 
 # Menu główne
 def main_menu():
@@ -176,24 +178,6 @@ def main_menu():
                     elif selected_option == 2:  # Wyjście
                         pygame.quit()
                         sys.exit()
-
-# Opcje
-def options_menu():
-    running = True
-    while running:
-        screen.fill(BLACK)
-        draw_text("Opcje", pixel_font, WHITE, screen, SCREEN_WIDTH // 2, 100)
-        draw_text("Naciśnij ESC, aby wrócić", pixel_font, WHITE, screen, SCREEN_WIDTH // 2, 300)
-        pygame.display.flip()
-
-        # Obsługa zdarzeń
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:  # Powrót do gry
-                    running = False
 
 
 def shop_menu():
@@ -235,6 +219,7 @@ def shop_menu():
                         gun.sprite.upgrade(upgrades[selected_option])
                         cash_sound.play()
 
+
 def handle_player_movement():
     keys = pygame.key.get_pressed()
     directions = {
@@ -250,7 +235,8 @@ def handle_player_movement():
             update_positions(player_bullets, dx, dy)
             update_positions(zombie_group, dx, dy)
 
-def update_game_logic_and_draw():
+
+def update_game_logic_and_draw(player_health):
     player.sprite.update()
     player.sprite.player_input()
     bullet_group.update()
@@ -265,15 +251,21 @@ def update_game_logic_and_draw():
     gun.draw(screen)
 
     # HUD
-    draw_text("$"+str(money),pixel_font,GREEN,screen ,10+(len(str(money))+1)*6, 10)
-    draw_text(str(player.sprite.health)+"HP",pixel_font,RED,screen ,SCREEN_WIDTH-((len(str(player.sprite.health))+2)*6)-7, 10)
+    draw_text("$"+str(money),pixel_font,GREEN,screen ,10 + (len(str(money))+1)*6, 10)
+    draw_text(str(player.sprite.health) + "HP", pixel_font,RED,screen, SCREEN_WIDTH-((len(str(player.sprite.health))+2)*6)-7, 10)
 
+    if player_health <= 0:
+            display_fading_text(screen, "Game Over", menu_font, RED, 1.5, 0.5)
+            return False
+    return True
 
+def kill_all_zombies():
+    for zombie in zombie_group:
+        zombie.kill()
 
 def game_loop():
     running = True
-    for zombie in zombie_group:
-        zombie.kill()
+    kill_all_zombies()
     wave_manager.reset_waves()
     player.sprite.health = player.sprite.max_health
     while running:
@@ -281,16 +273,16 @@ def game_loop():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 quit()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    running = False
 
         handle_player_movement()
-
-        update_game_logic_and_draw()
+        running = update_game_logic_and_draw(player.sprite.health)
 
         pygame.display.update()
         clock.tick(FPS)
-        if player.sprite.health <= 0:
-            display_fading_text(screen, "Game Over", menu_font, RED, 1.5, 0.5)
-            running = False
+        
 
 # Uruchom menu główne
 main_menu()
