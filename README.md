@@ -46,7 +46,8 @@ To play Quack Attack: Zombie Quackdown, follow these steps:
 ## Project Details
 
 This game was developed as part of a university project for the Functional Programming course. The goal was to create a functional and engaging game using Python and Pygame, while applying programming concepts learned during the course.
-Contributing
+
+## Contributing
 
 If you'd like to contribute to this project, feel free to fork the repository and submit a pull request. All contributions are welcome!
 
