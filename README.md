@@ -30,7 +30,7 @@ To play Quack Attack: Zombie Quackdown, follow these steps:
 
 4. **Run the Game**: Navigate to the project directory and run the QuackAttack.py file.
     ```bash
-    cd quack-attack-zombie-quackdown
+    cd Quack-Attack
     python QuackAttack.py
 
 ## How to Play
