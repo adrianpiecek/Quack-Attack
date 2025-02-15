@@ -206,7 +206,7 @@ def shop_menu():
     running = True
     while running:
         screen.fill(BLACK)
-        draw_text("Sklep", menu_font, WHITE, screen, SCREEN_WIDTH // 2, 100)
+        draw_text("Shop", menu_font, WHITE, screen, SCREEN_WIDTH // 2, 100)
         draw_text("Press ESC to Return", pixel_font, WHITE,
                   screen, SCREEN_WIDTH // 2, SCREEN_HEIGHT-50)
 
